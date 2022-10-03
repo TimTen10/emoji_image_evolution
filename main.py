@@ -98,7 +98,7 @@ def evolve(population: list[np.ndarray],
     for individual in population:
         scored.append((individual, scoring_function(original, individual)))
 
-    scored.sort(key=lambda x: x[1], reverse=True)  # Sort scored individuals, best scores at the front
+    scored.sort(key=lambda x: x[1])  # Sort scored individuals, best (lowest) scores at the front
     parent = scored[0][0]
 
     next_gen = []
