@@ -33,17 +33,30 @@ def load_original(filepath: str) -> np.ndarray:
 
 
 def initialize_population(*, image_size: tuple[int, int], population_size: int) -> list[np.ndarray]:
+    """
+    Erzeugt die initiale Population (Liste) aus schwarzen Bildern (genauer gesagt Numpy Arrays mit nur 0en).
+
+    :param image_size: Tupel aus Höhe x Breite
+    :param population_size: Anzahl der Elemente in der Population
+    :return: Liste aus 0er Arrays in der Größe des original Bildes (entspricht komplett schwarzen Bildern)
+    """
     return [np.zeros(image_size) for _ in range(population_size)]
 
 
 def transform(to_add: np.ndarray) -> np.ndarray:
     # TODO: Might want to have PIL.Image as input instead of np.ndarray for rotation and scaling purpose
-    # Position can not really be transformed in here
     pass
 
 
-def score(original_image_pixels: np.ndarray, approach_image_pixels: np.ndarray) -> float:
-    pass
+def score(original_image_pixels: np.ndarray, approach_image_pixels: np.ndarray) -> int:
+    """
+    Returns the sum of absolute pixel values attained by subtracting the approach image from the original.
+
+    :param original_image_pixels: Original image pixel values
+    :param approach_image_pixels: Approach image pixel values
+    :return: score of "similarity" between pixel values
+    """
+    return np.sum(np.abs(original_image_pixels - approach_image_pixels)).item()
 
 
 def evolve(population: list[np.ndarray],
