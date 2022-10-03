@@ -23,6 +23,8 @@ Steps:
 import numpy as np
 from PIL import Image
 
+from typing import Callable
+
 
 def load_original(filepath: str) -> np.ndarray:
     original_image = Image.open(filepath)
@@ -41,6 +43,11 @@ def transform(to_add: np.ndarray) -> np.ndarray:
 
 
 def score(original_image_pixels: np.ndarray, approach_image_pixels: np.ndarray) -> float:
+    pass
+
+
+def evolve(population: list[np.ndarray],
+           scoring_function: Callable[[np.ndarray, np.ndarray], float]) -> np.ndarray:
     pass
 
 
