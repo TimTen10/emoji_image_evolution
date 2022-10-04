@@ -1,30 +1,9 @@
-"""
-Basic idea:
-Recreate an image by approximating it using scaled and rotates components as building blocks.
-The "emoji image" will be built one emoji after another using a genetic algorithm like approach.
-All components found in the "components" folder can be used as parents / mutations.
-
-Steps:
-1. Load original image and turn it into height x width x colors matrix (colors = 4 if mode RGBA)
-2.1 Create new (empty) image with the same width and height
-2.2 Put one of the components (transformed) onto it
-    - possible transformations:
-        - rotate
-        - size
-        - position
-        -> randomly create transformations
-3. Compare the new image and the original
-    - Repeat for every version of the new image
-4. Choose best one
-    - Need function to determine the "best" one (pixel value diff.?)
-5. Repeat until new image is close enough to original image
-"""
-
 import numpy as np
 from PIL import Image
 
 import glob
 import random
+from pathlib import Path
 from typing import Callable
 
 from util import timed_func
@@ -37,7 +16,12 @@ def load_original() -> np.ndarray:
     :return: Numpy array of the pixel values of the selected image.
     """
     original_image = Image.open(list(glob.iglob("original/*"))[0]).convert('RGBA')
-    original_pixel = np.array(original_image, dtype=np.ubyte)  # Creates numpy array of pixels
+
+    # Fill transparent spots with some color
+    image_with_background = Image.new("RGBA", original_image.size, "WHITE")
+    image_with_background.paste(original_image, (0, 0), original_image)
+
+    original_pixel = np.array(image_with_background, dtype=np.ubyte)  # Creates numpy array of pixels
     return original_pixel
 
 
@@ -67,7 +51,7 @@ def transform(base_image: np.ndarray, component: Image) -> np.ndarray:
     component = component.rotate(angle=random.randrange(360), expand=True)
 
     # Scale:
-    scaling_factor = random.randint(10, 1000) / 100
+    scaling_factor = random.randint(10, 500) / 100
     new_dimensions = (int(component.width * scaling_factor), int(component.height * scaling_factor))
     component = component.resize(new_dimensions)
 
@@ -107,6 +91,7 @@ def evolve(population: list[np.ndarray],
     :param scoring_function: Function for comparing how close the recreation is to the original.
     :return: Tuple of best performing individual and next generation population.
     """
+    # TODO: Reintroduce having len(population) // 10 parents? Will slow down method
     parent = (population[0], scoring_function(original, population[0]))
     for individual in population[1:]:
         indiv_score = scoring_function(original, individual)
@@ -122,22 +107,28 @@ def evolve(population: list[np.ndarray],
     return parent, next_gen
 
 
-def run_evolution():
+def run_evolution(run_name: str,
+                  epochs: int,
+                  population_size: int):
+    # Load original image, components and initialize population
     orig_pix = load_original()
-
     components = load_components()
-
-    # Evolution
-    epochs = 1000
-    population_size = 100
     population = initialize_population(image_size=orig_pix.shape,
                                        population_size=population_size)
 
+    # Create output directory
+    output_path = f"output_images/{run_name}_{epochs}_{population_size}"
+    try:
+        Path(output_path).mkdir()
+    except FileExistsError:
+        pass
+
+    # Evolution time
     for e in range(epochs + 1):
         best_image, population = evolve(population, orig_pix, components, score)
-        if e % 2 == 0:
+        if e % 20 == 0:
             best_image = Image.fromarray(best_image)
-            best_image.save(f"output_images/recreation_epoch_{e}.png")
+            best_image.save(f"{output_path}/recreation_epoch_{e}.png")
         print(f"Done with Epoch {e}")
 
 
@@ -159,4 +150,6 @@ def main():
 
 
 if __name__ == '__main__':
-    run_evolution()
+    run_evolution(run_name="schiggy_zwei",
+                  epochs=2000,
+                  population_size=1000)
