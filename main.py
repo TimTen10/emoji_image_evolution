@@ -74,15 +74,10 @@ def transform(base_image: np.ndarray, component: Image) -> np.ndarray:
     # Position:
     height, width, _ = base_image.shape
     # Create
-    canvas = np.zeros((height + component.height, width + component.width, 4), dtype=np.ubyte)
-    x_pos = random.randint(0, width)
-    y_pos = random.randint(0, height)
-    canvas[y_pos:y_pos+component.height, x_pos:x_pos+component.width] = component
-    # Cut into shape
-    canvas = canvas[component.height // 2:-component.height // 2, component.width // 2:-component.width // 2]
-    canvas_image = Image.fromarray(canvas)
+    x_pos = random.randint(0, width) - component.width // 2
+    y_pos = random.randint(0, height) - component.height // 2
     transformed_image = Image.fromarray(base_image)
-    transformed_image.paste(canvas_image, (0, 0), canvas_image)
+    transformed_image.paste(component, (x_pos, y_pos), component)
     return np.array(transformed_image, dtype=np.ubyte)
 
 
