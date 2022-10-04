@@ -27,21 +27,27 @@ import glob
 import random
 from typing import Callable
 
+from util import timed_func
 
-def load_original(filepath: str) -> np.ndarray:
-    original_image = Image.open(filepath).convert('RGBA')
+
+def load_original() -> np.ndarray:
+    """
+    Loads the first image in the original folder as the original image.
+
+    :return: Numpy array of the pixel values of the selected image.
+    """
+    original_image = Image.open(list(glob.iglob("original/*"))[0]).convert('RGBA')
     original_pixel = np.array(original_image, dtype=np.ubyte)  # Creates numpy array of pixels
     return original_pixel
 
 
-def load_components(folderpath: str) -> list[Image]:
+def load_components() -> list[Image]:
     """
-    This method loads all '.png' as jpeg Images into a list.
+    This method loads all '.png' PIL.Images into a list.
 
-    :param folderpath:
-    :return: List of PIL.Images in RGB mode
+    :return: List of PIL.Images
     """
-    return [Image.open(component) for component in glob.iglob(f"{folderpath}/*.png")]
+    return [Image.open(component) for component in glob.iglob(f"components/*.png")]
 
 
 def initialize_population(*, image_size: tuple[int, int], population_size: int) -> list[np.ndarray]:
@@ -55,9 +61,10 @@ def initialize_population(*, image_size: tuple[int, int], population_size: int) 
     return [np.zeros(image_size, dtype=np.ubyte) for _ in range(population_size)]
 
 
+# @timed_func
 def transform(base_image: np.ndarray, component: Image) -> np.ndarray:
     # Rotate:
-    component = component.rotate(angle=random.randrange(360))
+    component = component.rotate(angle=random.randrange(360), expand=True)
 
     # Scale:
     scaling_factor = random.randint(10, 1000) / 100
@@ -83,24 +90,35 @@ def score(original_image_pixels: np.ndarray, approach_image_pixels: np.ndarray) 
     """
     Returns the sum of absolute pixel values attained by subtracting the approach image from the original.
 
-    :param original_image_pixels: Original image pixel values
-    :param approach_image_pixels: Approach image pixel values
-    :return: score of "similarity" between pixel values
+    :param original_image_pixels: Original image pixel values.
+    :param approach_image_pixels: Approach image pixel values.
+    :return: score of "similarity" between pixel values.
     """
     return np.sum(np.abs(original_image_pixels - approach_image_pixels)).item()
 
 
+@timed_func
 def evolve(population: list[np.ndarray],
            original: np.ndarray,
            components: list[Image],
            scoring_function: Callable[[np.ndarray, np.ndarray], float]) -> [np.ndarray, list[np.ndarray]]:
-    scored = []
-    for individual in population:
-        scored.append((individual, scoring_function(original, individual)))
+    """
+    Evolves a population of candidates by first scoring them and then merging transformed components onto copies of the
+    best performing individual.
 
-    scored.sort(key=lambda x: x[1])  # Sort scored individuals, best (lowest) scores at the front
-    parent = scored[0][0]
+    :param population: List of candidate solutions.
+    :param original: Original image to be approached.
+    :param components: Building blocks for recreating the original image.
+    :param scoring_function: Function for comparing how close the recreation is to the original.
+    :return: Tuple of best performing individual and next generation population.
+    """
+    parent = (population[0], scoring_function(original, population[0]))
+    for individual in population[1:]:
+        indiv_score = scoring_function(original, individual)
+        if indiv_score < parent[1]:
+            parent = (individual, indiv_score)
 
+    parent = parent[0]
     next_gen = []
     for comp in components:
         for _ in range(len(population) // len(components)):
@@ -109,12 +127,10 @@ def evolve(population: list[np.ndarray],
     return parent, next_gen
 
 
-def run():
-    # TODO: Filenames via sysargs
-    orig_name = "pokemon_ending_screen"
-    orig_pix = load_original(f"original/{orig_name}.jpg")
+def run_evolution():
+    orig_pix = load_original()
 
-    components = load_components("components")
+    components = load_components()
 
     # Evolution
     epochs = 1000
@@ -126,20 +142,26 @@ def run():
         best_image, population = evolve(population, orig_pix, components, score)
         if e % 2 == 0:
             best_image = Image.fromarray(best_image)
-            best_image.save(f"output_images/{orig_name}_{e}.png")
+            best_image.save(f"output_images/recreation_epoch_{e}.png")
         print(f"Done with Epoch {e}")
 
 
 def main():
-    im = Image.open("emojis/watermelon.png")
-    print(im.format, im.size, im.mode)
+    # Run some basic assertion tests
+    im = np.full((123, 123, 4), 122, dtype=np.ubyte)
 
-    im_pix = np.array(im)
-    print(im_pix.shape)
+    assert score(im, im) == 0, "Score function should return 0 for same image"
+    assert score(
+        np.array([1, 2, 3, 4]),
+        np.array([0, 0, 0, 0])
+    ) == 10, "Score function returns false value"
 
-    new_image = np.zeros(im_pix.shape)
-    print(new_image.shape)
+    components = load_components()
+
+    out_array = transform(im, components[0])
+    out_image = Image.fromarray(out_array)
+    out_image.save("output_images/transform.png")
 
 
 if __name__ == '__main__':
-    run()
+    run_evolution()
