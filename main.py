@@ -1,6 +1,7 @@
 import numpy as np
 from PIL import Image
 
+import argparse
 import glob
 import random
 from pathlib import Path
@@ -91,7 +92,7 @@ def evolve(population: list[np.ndarray],
     :param scoring_function: Function for comparing how close the recreation is to the original.
     :return: Tuple of best performing individual and next generation population.
     """
-    # TODO: Reintroduce having len(population) // 10 parents? Will slow down method
+    # TODO: Reintroduce having len(population) // 10 parents? Will slow down method unless we cut mutations per indiv
     parent = (population[0], scoring_function(original, population[0]))
     for individual in population[1:]:
         indiv_score = scoring_function(original, individual)
@@ -119,14 +120,14 @@ def run_evolution(run_name: str,
     # Create output directory
     output_path = f"output_images/{run_name}_{epochs}_{population_size}"
     try:
-        Path(output_path).mkdir()
+        Path(output_path).mkdir(parents=True)
     except FileExistsError:
         pass
 
     # Evolution time
     for e in range(epochs + 1):
         best_image, population = evolve(population, orig_pix, components, score)
-        if e % 20 == 0:
+        if e % 20 == 0 and e != 0:
             best_image = Image.fromarray(best_image)
             best_image.save(f"{output_path}/recreation_epoch_{e}.png")
         print(f"Done with Epoch {e}")
@@ -144,12 +145,14 @@ def main():
 
     components = load_components()
 
-    out_array = transform(im, components[0])
-    out_image = Image.fromarray(out_array)
-    out_image.save("output_images/transform.png")
-
 
 if __name__ == '__main__':
-    run_evolution(run_name="schiggy_zwei",
-                  epochs=2000,
-                  population_size=1000)
+    parser = argparse.ArgumentParser(description="Recreate an image.")
+    parser.add_argument("run_name", help="Name for output folder", type=str)
+    parser.add_argument("epochs", help="Number of epochs to run the algorithm for", type=int)
+    parser.add_argument("population_size", help="Number of individuals per epoch", type=int)
+    args = parser.parse_args()
+
+    run_evolution(run_name=args.run_name,
+                  epochs=args.epochs,
+                  population_size=args.population_size)
