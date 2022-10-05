@@ -1,3 +1,4 @@
+import PIL
 import numpy as np
 from PIL import Image
 
@@ -16,7 +17,10 @@ def load_original() -> np.ndarray:
 
     :return: Numpy array of the pixel values of the selected image.
     """
-    original_image = Image.open(list(glob.iglob("original/*"))[0]).convert('RGBA')
+    try:
+        original_image = Image.open(glob.glob("original/*")[0]).convert('RGBA')
+    except (IndexError, PIL.UnidentifiedImageError):
+        raise FileNotFoundError("There exists no .jpg / .jpeg / .png file in the 'original' folder") from None
 
     # Fill transparent spots with some color
     image_with_background = Image.new("RGBA", original_image.size, "WHITE")
