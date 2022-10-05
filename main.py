@@ -41,11 +41,11 @@ def load_components() -> list[Image]:
 
 def initialize_population(*, image_size: tuple[int, int], population_size: int) -> list[np.ndarray]:
     """
-    Erzeugt die initiale Population (Liste) aus schwarzen Bildern (genauer gesagt Numpy Arrays mit nur 0en).
+    Creates the initial population of black images (numpy zeros arrays).
 
-    :param image_size: Tupel aus Höhe x Breite
-    :param population_size: Anzahl der Elemente in der Population
-    :return: Liste aus 0er Arrays in der Größe des original Bildes (entspricht komplett schwarzen Bildern)
+    :param image_size: tuple - height x width
+    :param population_size: number of elements in the population
+    :return: numpy zeros arrays the size of the original image
     """
     return [np.zeros(image_size, dtype=np.ubyte) for _ in range(population_size)]
 
@@ -96,7 +96,8 @@ def evolve(population: list[np.ndarray],
     :param scoring_function: Function for comparing how close the recreation is to the original.
     :return: Tuple of best performing individual and next generation population.
     """
-    # TODO: Reintroduce having len(population) // 10 parents? Will slow down method unless we cut mutations per indiv
+    # TODO: Reintroduce having len(population) // 10 parents?
+    # TODO: Will slow down method unless we cut mutations per individual
     parent = (population[0], scoring_function(original, population[0]))
     for individual in population[1:]:
         indiv_score = scoring_function(original, individual)
